@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,21 +23,12 @@ jobs:
       - name: 📥 Checkout do repositório
         uses: actions/checkout@v4
 
-      - name: 📁 Criar estrutura de build
-        run: mkdir -p build
-
       - name: 📋 Copiar site para pasta de build
         run: |
+          mkdir -p build
           cp -r site/. build/
-          echo "Arquivos copiados:"
+          echo "✅ Arquivos copiados:"
           ls -la build/
-
-      - name: 🔧 Injetar metadados de build
-        run: |
-          BUILD_DATE=$(date '+%d/%m/%Y %H:%M:%S UTC')
-          COMMIT_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
-          sed -i "s|</body>|<!-- Build: $BUILD_DATE | Commit: $COMMIT_SHORT -->\n</body>|" build/index.html
-          echo "✅ Metadados injetados: $BUILD_DATE | $COMMIT_SHORT"
 
       - name: ✅ Validar build
         run: |
@@ -45,7 +36,7 @@ jobs:
             echo "❌ ERRO: build/index.html não encontrado!"
             exit 1
           fi
-          echo "✅ Build validado!"
+          echo "✅ Build validado com sucesso!"
 
       - name: ⚙️ Configurar GitHub Pages
         uses: actions/configure-pages@v4
@@ -55,7 +46,7 @@ jobs:
         with:
           path: build/
 
-      - name: 📦 Publicar artefato para download
+      - name: 📦 Artefato para download
         uses: actions/upload-artifact@v4
         with:
           name: site-buildado-${{ github.run_number }}
@@ -78,5 +69,5 @@ jobs:
 
       - name: ✅ Deploy concluído
         run: |
-          echo "🎉 Site publicado!"
+          echo "🎉 Site publicado com sucesso!"
           echo "🔗 URL: ${{ steps.deployment.outputs.page_url }}"
