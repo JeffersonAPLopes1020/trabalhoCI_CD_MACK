@@ -1,0 +1,88 @@
+name: CI — Integração Contínua
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validacao:
+    name: Validar Projeto
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: 📁 Verificar estrutura de pastas
+        run: |
+          echo "=== Estrutura do projeto ==="
+          ls -la
+          echo ""
+          echo "=== Conteúdo de site/ ==="
+          ls -la site/
+
+      - name: 🔍 Verificar index.html
+        run: |
+          if [ ! -f "site/index.html" ]; then
+            echo "❌ ERRO: site/index.html não encontrado!"
+            exit 1
+          fi
+          TAMANHO=$(wc -c < "site/index.html")
+          echo "✅ site/index.html encontrado ($TAMANHO bytes)"
+          if [ "$TAMANHO" -lt 50 ]; then
+            echo "❌ ERRO: index.html parece estar vazio!"
+            exit 1
+          fi
+
+      - name: 🏷️ Verificar tags HTML obrigatórias
+        run: |
+          FALHOU=0
+          verificar_tag() {
+            TAG=$1
+            if grep -qi "$TAG" site/index.html; then
+              echo "✅ Tag '$TAG' encontrada"
+            else
+              echo "❌ Tag '$TAG' NÃO encontrada"
+              FALHOU=1
+            fi
+          }
+          verificar_tag "<!DOCTYPE html>"
+          verificar_tag "<html"
+          verificar_tag "<head"
+          verificar_tag "<title"
+          verificar_tag "<body"
+          verificar_tag "</html>"
+          if [ "$FALHOU" -eq 1 ]; then
+            echo "❌ Validação HTML falhou!"
+            exit 1
+          fi
+          echo "✅ Todas as tags obrigatórias estão presentes."
+
+      - name: 📝 Gerar relatório de CI
+        run: |
+          mkdir -p relatorio
+          cat > relatorio/ci-report.txt << EOF
+          ========================================
+          RELATÓRIO DE INTEGRAÇÃO CONTÍNUA (CI)
+          ========================================
+          Data/Hora  : $(date '+%d/%m/%Y %H:%M:%S UTC')
+          Repositório: ${{ github.repository }}
+          Branch     : ${{ github.ref_name }}
+          Commit     : ${{ github.sha }}
+          Autor      : ${{ github.actor }}
+          ----------------------------------------
+          STATUS FINAL: APROVADO ✅
+          ========================================
+          EOF
+          cat relatorio/ci-report.txt
+
+      - name: 📤 Publicar artefato de CI
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-ci-${{ github.run_number }}
+          path: relatorio/
+          retention-days: 7
